@@ -12,6 +12,7 @@ from tensorboardX import SummaryWriter
 import time
 from os import makedirs
 from os.path import join
+import wandb
 
 parser = argparse.ArgumentParser(
     description='Training with MLP MNIST')
@@ -90,12 +91,18 @@ scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: args.lr_dec
 
 criterion = torch.nn.CrossEntropyLoss()
 time_stamp = time.strftime("%Y-%m-%d-%H-%M-%S")
-log_dir = join('./logs', time_stamp)
-makedirs(log_dir)
-writer = SummaryWriter(logdir=log_dir, comment=str(args)+'_'+time_stamp, flush_secs=5)
-writer.add_text('args', str(args))
 pbar = tqdm(range(args.epochs))
+wandb.init(project='Energy Modulated Dropout', group='mnist')
+wandb.config.update(args)
+wandb.watch(models=model, log_freq=1)
 for epoch in pbar:
+    # Doing evaluation first to have performance of untrained model as reference
+    model.eval()
+    val_preds = torch.max(model(x_val), dim=1)[1].detach().cpu().numpy()
+    val_acc = accuracy_score(y_val.cpu().numpy(), val_preds)
+    print(val_acc)
+    wandb.log({'val accuracy': val_acc}, step=epoch)
+
     train_dl = DataLoader(train_ds, batch_size=args.batch_size)
     model.train()
     for i, (input, target) in enumerate(train_dl):
@@ -105,14 +112,8 @@ for epoch in pbar:
         loss.backward()
         optimizer.step()
         pbar.set_description('loss: {:.4f}'.format(float(loss.data)))
-        if i == 0:
-            writer.add_scalar('train loss', loss, epoch*len(train_dl) + i)
+
+    wandb.log({'train loss': loss}, step=epoch)
     scheduler.step()
-    model.eval()
-    val_preds = torch.max(model(x_val), dim=1)[1].detach().cpu().numpy()
-    val_acc = accuracy_score(y_val.cpu().numpy(), val_preds)
-    print(val_acc)
-    writer.add_scalar('val accuracy', val_acc, epoch*len(train_dl))
-    writer.flush()
-writer.close()
-print('Done')
+
+
