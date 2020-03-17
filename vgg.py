@@ -2,10 +2,12 @@
 import torch
 import torch.nn as nn
 from torch.nn import Conv2d as Conv2dNormal
-from .custom_layers import Conv2DCustom
+from custom_layers import Conv2DCustom
 
 
 cfg = {
+    'VGG_tiny': [32, 'M', 64, 'M', 128, 128, 'M'],
+    'VGG_mini': [32, 'M', 64, 'M', 128, 128, 'M', 256, 256, 'M', 256, 256, 'M'],
     'VGG11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'VGG13': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'VGG16': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
@@ -23,7 +25,12 @@ class VGG(nn.Module):
         else:
             Conv2d = Conv2DCustom
         self.features = self._make_layers(cfg[vgg_name])
-        self.classifier = nn.Linear(512, 10)
+        if vgg_name == 'VGG_mini':
+            self.classifier = nn.Linear(256, 10)
+        elif vgg_name == 'VGG_tiny':
+            self.classifier = nn.Linear(2048, 10)
+        else:
+            self.classifier = nn.Linear(512, 10)
 
     def forward(self, x):
         out = self.features(x)
