@@ -70,10 +70,10 @@ else:
     mnist.target = np.random.randint(0, 10, (70000))
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-t = torch.cuda if (torch.cuda.is_available() and device != 'cpu') else torch
-x = t.Tensor(mnist.data) / 255.0
+
+x = (torch.Tensor(mnist.data) / 255.0).to(device)
 x = x.view(-1, 1, 28, 28)
-y = t.Tensor(mnist.target.astype(np.int)).long()
+y = torch.Tensor(mnist.target.astype(np.int)).long().to(device)
 x_train, x_val, x_test = x[:50000], x[50000:60000], x[60000:]
 y_train, y_val, y_test = y[:50000], y[50000:60000], y[60000:]
 
