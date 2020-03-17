@@ -129,7 +129,7 @@ def test(epoch):
         best_acc = acc
 
 
-for epoch in tqdm(range(start_epoch, start_epoch+200)):
+for epoch in tqdm(range(start_epoch, start_epoch+args.epochs)):
     train(epoch)
     test(epoch)
 
