@@ -8,6 +8,7 @@ Rows are about how you compute the "modulating signal" (modsig):
 
     row1. Compute the forward pass energy and use that as modulating signal (modsig). This has an unsupervised vibe, because it is 
     using other neuron signals to predict in a sense what the gradients would be in the backward pass using their consensus.
+    This could be done on logits or activations.
     
     row2. Instead of computing the energy in forward pass use the gradients received in the backward pass
 
@@ -16,9 +17,10 @@ Columns are about how you use the modsig in the backward pass:
     col1. Set the weights' gradients to zero by a function of modsig (e.g. probabilistic like dropout or deterministic)
     Here the weights and their input neurons will not receive a training signal. 
     
-    col2. Train the weights but don't pass the gradient to the input neurons
+    col2. Train the weights but don't pass the gradient to the input neurons. I feel like doing this with a large L1 
+    regularization term, could result in sparse but "rich"(orthonogal?) functions.
 
-I'll like to try row1-col2 combinations first.
+I'll like to try row2-col2 combinations first.
 
 The next decision is about how to use the modsig to dropout weights. I can think of two ways:
     1. Drop out the top-k weights and/or input neurons
