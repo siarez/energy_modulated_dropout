@@ -13,9 +13,7 @@ from os import makedirs
 from os.path import join
 import wandb
 
-parser = argparse.ArgumentParser(
-    description='Training with MLP MNIST')
-
+parser = argparse.ArgumentParser(description='Training with MLP MNIST')
 parser.add_argument('-batch_size', type=int, default=200)
 parser.add_argument('-lr', type=float, default=0.07)
 parser.add_argument('-lr_decay', type=float, default=1)  # 1 means lr won't decay
@@ -71,10 +69,11 @@ else:
     mnist.data = np.random.randint(0, 255, (70000, 784))
     mnist.target = np.random.randint(0, 10, (70000))
 
-
-x = torch.Tensor(mnist.data) / 255.0
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+t = torch.cuda if (torch.cuda.is_available() and device != 'cpu') else torch
+x = t.Tensor(mnist.data) / 255.0
 x = x.view(-1, 1, 28, 28)
-y = torch.Tensor(mnist.target.astype(np.int)).long()
+y = t.Tensor(mnist.target.astype(np.int)).long()
 x_train, x_val, x_test = x[:50000], x[50000:60000], x[60000:]
 y_train, y_val, y_test = y[:50000], y[50000:60000], y[60000:]
 
@@ -84,7 +83,7 @@ if args.in_grad:
 # val_ds = TensorDataset(x_val, y_val)
 
 # model = MLP(784, 10, args.hid_size, args.normal)
-model = Conv(10, normal=args.normal)
+model = Conv(10, normal=args.normal).to(device)
 optimizer = SGD(model.parameters(), lr=args.lr, weight_decay=0.0001)
 scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: args.lr_decay ** epoch)
 
