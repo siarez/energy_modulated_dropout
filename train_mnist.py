@@ -9,8 +9,6 @@ import argparse
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 import time
-from os import makedirs
-from os.path import join
 import wandb
 
 parser = argparse.ArgumentParser(description='Training with MLP MNIST')
@@ -70,6 +68,7 @@ else:
     mnist.target = np.random.randint(0, 10, (70000))
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print('Device: ', device)
 
 x = (torch.Tensor(mnist.data) / 255.0).to(device)
 x = x.view(-1, 1, 28, 28)
@@ -88,9 +87,9 @@ optimizer = SGD(model.parameters(), lr=args.lr, weight_decay=0.0001)
 scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: args.lr_decay ** epoch)
 
 criterion = torch.nn.CrossEntropyLoss()
-time_stamp = time.strftime("%Y-%m-%d-%H-%M-%S")
+timestamp = time.strftime("%Y-%m-%d-%H-%M-%S")
 pbar = tqdm(range(args.epochs))
-wandb.init(project='Energy Modulated Dropout', group='mnist')
+wandb.init(name=timestamp, project='Energy Modulated Dropout', group='mnist')
 wandb.config.update(args)
 wandb.watch(models=model, log_freq=1)
 for epoch in pbar:
@@ -101,7 +100,7 @@ for epoch in pbar:
     print(val_acc)
     wandb.log({'val accuracy': val_acc}, step=epoch)
 
-    train_dl = DataLoader(train_ds, batch_size=args.batch_size)
+    train_dl = DataLoader(train_ds, batch_size=args.batch_size, num_workers=4)
     model.train()
     for i, (input, target) in enumerate(train_dl):
         optimizer.zero_grad()
