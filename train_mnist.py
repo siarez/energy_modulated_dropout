@@ -8,7 +8,6 @@ from custom_layers import LinearCustom, Conv2DCustom
 import argparse
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
-from tensorboardX import SummaryWriter
 import time
 from os import makedirs
 from os.path import join
