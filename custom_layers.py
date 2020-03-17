@@ -86,7 +86,7 @@ class Conv2DFunctionCustom(Function):
         if ctx.needs_input_grad[0]:
             grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output, stride, padding, dilation, groups)
         if ctx.needs_input_grad[1]:
-            grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups)
+            grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups).contiguous()
         if ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum((0, 2, 3))  # todo: double check
         return grad_input, grad_weight, grad_bias, grad_stride, grad_padding, grad_dilation, grad_groups
