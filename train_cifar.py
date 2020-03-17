@@ -12,13 +12,14 @@ from tqdm import tqdm
 import wandb
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
-parser.add_argument('--decay', default=5e-4, type=float, help='weight decay')
-parser.add_argument('--mom', default=0.9, type=float, help='momentum')
+parser.add_argument('--lr', default=0.1, type=float, help='Learning rate')
+parser.add_argument('--decay', default=5e-4, type=float, help='Weight decay')
+parser.add_argument('--mom', default=0.9, type=float, help='Momentum')
 parser.add_argument('--optim', default='adam', choices=['sgd', 'adam'], help='momentum')
-parser.add_argument('--batch', default=128, type=int, help='batch size')
-parser.add_argument('--normal', action='store_true', default=False, help='use pytorch\'s conv layer')
-parser.add_argument('--model', choices=['VGG_tiny', 'VGG_mini', 'VGG11', 'VGG13', 'VGG16', 'VGG19', 'sp1'], default='VGG_tiny', help='pick a VGG')
+parser.add_argument('--batch', default=128, type=int, help='Batch size')
+parser.add_argument('--epochs', default=100, type=int, help='Epochs to train for')
+parser.add_argument('--normal', action='store_true', default=False, help='Use pytorch\'s conv layer')
+parser.add_argument('--model', choices=['VGG_tiny', 'VGG_mini', 'VGG11', 'VGG13', 'VGG16', 'VGG19', 'sp1'], default='VGG_tiny', help='Pick a VGG')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -58,7 +59,7 @@ net = net.to(device)
 wandb.init(name=timestamp, project='Energy Modulated Dropout', group='cifar')
 wandb.config.update(args)
 criterion = nn.CrossEntropyLoss()
-wandb.watch(models=net, criterion=criterion)
+wandb.watch(models=net, criterion=criterion, log='all')
 
 if args.optim == 'sgd':
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.decay)
