@@ -22,10 +22,10 @@ parser.add_argument('--epochs', default=100, type=int, help='Epochs to train for
 parser.add_argument('--workers', default=4, type=int, help='Dataloader workers')
 parser.add_argument('--normal', action='store_true', default=False, help='Use pytorch\'s conv layer')
 parser.add_argument('--topk', action='store_true', default=False, help='whether to mask topk gradients')
+parser.add_argument('--topk_ratio', default=0.25, help='Ratio to be masked')
 parser.add_argument('--model', choices=['VGG_tiny', 'VGG_mini', 'VGG11', 'VGG13', 'VGG16', 'VGG19', 'sp1'], default='VGG_tiny', help='Pick a VGG')
 args = parser.parse_args()
 
-conf['topk'] = args.topk
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('==> Device: ', device)
 best_acc = 0  # best test accuracy
@@ -55,6 +55,8 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch, shuffle
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 # Model
+conf['topk'] = args.topk
+conf['topk_ratio'] = args.topk_ratio
 print('==> Building model..')
 net = VGG(args.model, normal=args.normal)
 print('Num of parameters: ', sum(p.numel() for p in net.parameters() if p.requires_grad))

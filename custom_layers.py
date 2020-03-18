@@ -28,7 +28,7 @@ The next decision is about how to use the modsig to dropout weights. I can think
 
 """
 
-conf = {'topk': False}
+conf = {'topk': False, 'topk_ratio': 0.25}
 
 # Inherit from Function
 class LinearFunctionCustom(Function):
@@ -89,8 +89,8 @@ class Conv2DFunctionCustom(Function):
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups).contiguous()
         if ctx.needs_input_grad[0]:
             if conf['topk']:
-                topk_idx = grad_weight.abs().sum((2, 3)).topk(grad_weight.shape[1] // 2, dim=1)[1]
-                topk_mask = torch.ones((weight.shape[0], weight.shape[1]), device=weight.device).scatter(1, topk_idx, torch.zeros_like(topk_idx, dtype=torch.float))
+                topk_idx = grad_weight.abs().sum((2, 3)).topk(int(grad_weight.shape[1] * conf['topk_ratio']), dim=1)[1]
+                topk_mask = torch.ones((weight.shape[0], weight.shape[1]), device=weight.device).scatter(1, topk_idx, 0.)
                 topk_mask = topk_mask.unsqueeze(-1).unsqueeze(-1)
                 bw_weight = weight * topk_mask
             else:
