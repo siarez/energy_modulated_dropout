@@ -12,7 +12,7 @@ from tqdm import tqdm
 import wandb
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--lr', default=0.1, type=float, help='Learning rate')
+parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
 parser.add_argument('--decay', default=5e-4, type=float, help='Weight decay')
 parser.add_argument('--mom', default=0.9, type=float, help='Momentum')
 parser.add_argument('--optim', default='adam', choices=['sgd', 'adam'], help='momentum')
