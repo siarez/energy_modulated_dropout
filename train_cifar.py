@@ -8,6 +8,7 @@ import os
 import time
 import argparse
 from vgg import VGG
+from custom_layers import conf
 from tqdm import tqdm
 import wandb
 
@@ -20,9 +21,11 @@ parser.add_argument('--batch', default=128, type=int, help='Batch size')
 parser.add_argument('--epochs', default=100, type=int, help='Epochs to train for')
 parser.add_argument('--workers', default=4, type=int, help='Dataloader workers')
 parser.add_argument('--normal', action='store_true', default=False, help='Use pytorch\'s conv layer')
+parser.add_argument('--topk', action='store_true', default=False, help='whether to mask topk gradients')
 parser.add_argument('--model', choices=['VGG_tiny', 'VGG_mini', 'VGG11', 'VGG13', 'VGG16', 'VGG19', 'sp1'], default='VGG_tiny', help='Pick a VGG')
 args = parser.parse_args()
 
+conf['topk'] = args.topk
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('==> Device: ', device)
 best_acc = 0  # best test accuracy

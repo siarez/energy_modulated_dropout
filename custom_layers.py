@@ -28,6 +28,8 @@ The next decision is about how to use the modsig to dropout weights. I can think
 
 """
 
+conf = {'topk': False}
+
 # Inherit from Function
 class LinearFunctionCustom(Function):
     @staticmethod
@@ -78,15 +80,22 @@ class Conv2DFunctionCustom(Function):
     def backward(ctx, grad_output):
         #import pdb
         #pdb.Pdb(nosigint=True).set_trace()
-        #import pydevd
-        #pydevd.settrace(suspend=True, trace_only_current_thread=True)
+        # import pydevd
+        # pydevd.settrace(suspend=True, trace_only_current_thread=True)
         input, weight, bias, output = ctx.saved_tensors
         stride, padding, dilation, groups = ctx.stride, ctx.padding, ctx.dilation, ctx.groups
         grad_input = grad_weight = grad_bias = grad_stride = grad_padding = grad_dilation = grad_groups = None
-        if ctx.needs_input_grad[0]:
-            grad_input = torch.nn.grad.conv2d_input(input.shape, weight, grad_output, stride, padding, dilation, groups)
         if ctx.needs_input_grad[1]:
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups).contiguous()
+        if ctx.needs_input_grad[0]:
+            if conf['topk']:
+                topk_idx = grad_weight.abs().sum((2, 3)).topk(grad_weight.shape[1] // 2, dim=1)[1]
+                topk_mask = torch.ones(weight.shape[0], weight.shape[1]).scatter(1, topk_idx, torch.zeros_like(topk_idx, dtype=torch.float))
+                topk_mask = topk_mask.unsqueeze(-1).unsqueeze(-1)
+                bw_weight = weight * topk_mask
+            else:
+                bw_weight = weight
+            grad_input = torch.nn.grad.conv2d_input(input.shape, bw_weight, grad_output, stride, padding, dilation, groups)
         if ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum((0, 2, 3))  # todo: double check
         return grad_input, grad_weight, grad_bias, grad_stride, grad_padding, grad_dilation, grad_groups
