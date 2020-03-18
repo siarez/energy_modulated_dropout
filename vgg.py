@@ -17,14 +17,14 @@ cfg = {
 Conv2d = None
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name, normal=True):
+    def __init__(self, vgg_name, normal=True, dropout=0.):
         super(VGG, self).__init__()
         global Conv2d
         if normal:
             Conv2d = Conv2dNormal
         else:
             Conv2d = Conv2DCustom
-        self.features = self._make_layers(cfg[vgg_name])
+        self.features = self._make_layers(cfg[vgg_name], dropout=dropout)
         if vgg_name == 'VGG_mini':
             self.classifier = nn.Linear(256, 10)
         elif vgg_name == 'VGG_tiny':
@@ -38,7 +38,7 @@ class VGG(nn.Module):
         out = self.classifier(out)
         return out
 
-    def _make_layers(self, cfg):
+    def _make_layers(self, cfg, dropout=0.):
         layers = []
         in_channels = 3
         for x in cfg:
@@ -47,7 +47,8 @@ class VGG(nn.Module):
             else:
                 layers += [Conv2d(in_channels, x, kernel_size=3, padding=1),
                            nn.BatchNorm2d(x),
-                           nn.ReLU(inplace=True)]
+                           nn.ReLU(inplace=True),
+                           nn.Dropout2d(p=dropout)]
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
         return nn.Sequential(*layers)

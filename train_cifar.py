@@ -13,17 +13,18 @@ from tqdm import tqdm
 import wandb
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--lr', default=0.001, type=float, help='Learning rate')
-parser.add_argument('--decay', default=5e-4, type=float, help='Weight decay')
-parser.add_argument('--mom', default=0.9, type=float, help='Momentum')
-parser.add_argument('--optim', default='adam', choices=['sgd', 'adam'], help='momentum')
-parser.add_argument('--batch', default=128, type=int, help='Batch size')
-parser.add_argument('--epochs', default=100, type=int, help='Epochs to train for')
-parser.add_argument('--workers', default=4, type=int, help='Dataloader workers')
-parser.add_argument('--normal', action='store_true', default=False, help='Use pytorch\'s conv layer')
-parser.add_argument('--topk', action='store_true', default=False, help='whether to mask topk gradients')
-parser.add_argument('--topk_ratio', default=0.25, type=float, help='Ratio to be masked')
-parser.add_argument('--model', choices=['VGG_tiny', 'VGG_mini', 'VGG11', 'VGG13', 'VGG16', 'VGG19', 'sp1'], default='VGG_tiny', help='Pick a VGG')
+parser.add_argument('-lr', default=0.001, type=float, help='Learning rate')
+parser.add_argument('-decay', default=5e-4, type=float, help='Weight decay')
+parser.add_argument('-mom', default=0.9, type=float, help='Momentum')
+parser.add_argument('-optim', default='adam', choices=['sgd', 'adam'], help='momentum')
+parser.add_argument('-batch', default=128, type=int, help='Batch size')
+parser.add_argument('-epochs', default=100, type=int, help='Epochs to train for')
+parser.add_argument('-workers', default=4, type=int, help='Dataloader workers')
+parser.add_argument('-normal', action='store_true', default=False, help='Use pytorch\'s conv layer')
+parser.add_argument('-dropout', default=0., type=float, help='Drop probability')
+parser.add_argument('-topk', action='store_true', default=False, help='whether to mask topk gradients')
+parser.add_argument('-topk_ratio', default=0.25, type=float, help='Ratio to be masked')
+parser.add_argument('-model', choices=['VGG_tiny', 'VGG_mini', 'VGG11', 'VGG13', 'VGG16', 'VGG19', 'sp1'], default='VGG_tiny', help='Pick a VGG')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -58,7 +59,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 conf['topk'] = args.topk
 conf['topk_ratio'] = args.topk_ratio
 print('==> Building model..')
-net = VGG(args.model, normal=args.normal)
+net = VGG(args.model, normal=args.normal, dropout=args.dropout)
 print('Num of parameters: ', sum(p.numel() for p in net.parameters() if p.requires_grad))
 net = net.to(device)
 
