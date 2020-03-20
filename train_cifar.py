@@ -21,6 +21,7 @@ parser.add_argument('-batch', default=128, type=int, help='Batch size')
 parser.add_argument('-epochs', default=100, type=int, help='Epochs to train for')
 parser.add_argument('-workers', default=4, type=int, help='Dataloader workers')
 parser.add_argument('-normal', action='store_true', default=False, help='Use pytorch\'s conv layer')
+parser.add_argument('-bn_affine', action='store_true', default=False, help='Make the batchnorm layers affine')
 parser.add_argument('-dropout', default=0., type=float, help='Drop probability')
 parser.add_argument('-topk', action='store_true', default=False, help='whether to mask topk gradients')
 parser.add_argument('-topk_ratio', default=0.25, type=float, help='Ratio to be masked')
@@ -94,7 +95,7 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
         pbar.set_description('Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
-        conf['log_intermediate'] = batch_idx == 0
+        conf['log_intermediate'] = batch_idx == 0  # Only log the first batch of each epoch for speed reasons
 
     wandb.log({'Train Loss': train_loss/(batch_idx+1)}, step=epoch)
     wandb.log({'Train Acc.': 100.*correct/total}, step=epoch)
@@ -140,6 +141,7 @@ def test(epoch):
 
 for epoch in tqdm(range(start_epoch, start_epoch+args.epochs)):
     train(epoch)
+    conf['log_intermediate'] = False
     test(epoch)
 
 wandb.log({'hparam/accuracy': best_acc})
