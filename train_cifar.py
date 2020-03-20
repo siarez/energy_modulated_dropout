@@ -81,6 +81,7 @@ def train(epoch):
     correct = 0
     total = 0
     pbar = tqdm(enumerate(trainloader), total=len(trainloader))
+    conf['epoch'] = epoch
     for batch_idx, (inputs, targets) in pbar:
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()

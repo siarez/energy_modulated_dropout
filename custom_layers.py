@@ -126,7 +126,7 @@ class WandBLogger(nn.Module):
     def forward(self, x):
         if self.wandb and conf['log_intermediate']:
             train_val = '_t' if self.training else '_v'
-            self.wandb.log({self.name+train_val: x.cpu()})
+            self.wandb.log({self.name+train_val: x.cpu()}, step=conf['epoch'])
         return x
 
     def extra_repr(self):
