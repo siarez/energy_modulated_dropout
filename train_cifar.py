@@ -84,7 +84,7 @@ def train(epoch):
     for batch_idx, (inputs, targets) in pbar:
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
-        outputs = net(inputs)
+        outputs, features = net(inputs)
         loss = criterion(outputs, targets)  # + shapes_kernel_loss(net)
         loss.backward()
         optimizer.step()
@@ -108,7 +108,7 @@ def test(epoch):
         pbar = tqdm(enumerate(testloader), total=len(testloader))
         for batch_idx, (inputs, targets) in pbar:
             inputs, targets = inputs.to(device), targets.to(device)
-            outputs = net(inputs)
+            outputs, features = net(inputs)
             loss = criterion(outputs, targets)
             test_loss += loss.item()
             _, predicted = outputs.max(1)
@@ -118,6 +118,7 @@ def test(epoch):
                 % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
         wandb.log({'Test Loss': test_loss/(batch_idx+1)}, step=epoch)
         wandb.log({'Test Acc.': 100.*correct/total}, step=epoch)
+        wandb.log({'features', features})  # It will create a histogram of last conv activation
 
     # Save checkpoint.
     acc = 100.*correct/total
