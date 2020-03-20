@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import Conv2d as Conv2dNormal
-from custom_layers import Conv2DCustom
+from custom_layers import Conv2DCustom, WandBLogger
 
 
 cfg = {
@@ -17,14 +17,14 @@ cfg = {
 Conv2d = None
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name, normal=True, dropout=0.):
+    def __init__(self, vgg_name, normal=True, dropout=0., wandb=None):
         super(VGG, self).__init__()
         global Conv2d
         if normal:
             Conv2d = Conv2dNormal
         else:
             Conv2d = Conv2DCustom
-        self.features = self._make_layers(cfg[vgg_name], dropout=dropout)
+        self.features = self._make_layers(cfg[vgg_name], dropout=dropout, wandb=wandb)
         if vgg_name == 'VGG_mini':
             self.classifier = nn.Linear(256, 10)
         elif vgg_name == 'VGG_tiny':
@@ -36,19 +36,21 @@ class VGG(nn.Module):
         features = self.features(x)
         features = features.view(features.size(0), -1)
         out = self.classifier(features)
-        return out, features
+        return out
 
-    def _make_layers(self, cfg, dropout=0.):
+    def _make_layers(self, cfg, dropout=0., wandb=None):
         layers = []
         in_channels = 3
-        for x in cfg:
+        for i, x in enumerate(cfg):
             if x == 'M':
                 layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
             else:
                 layers += [Conv2d(in_channels, x, kernel_size=3, padding=1),
                            nn.BatchNorm2d(x),
                            nn.ReLU(inplace=True),
-                           nn.Dropout2d(p=dropout)]
+                           nn.Dropout2d(p=dropout),
+                           WandBLogger('L-{}|ch-{}'.format(i, x), wandb)
+                           ]
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
         return nn.Sequential(*layers)

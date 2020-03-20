@@ -113,3 +113,21 @@ class Conv2DCustom(nn.Conv2d):
     def extra_repr(self):
         return 'in_features={}, out_features={}, bias={}'.format(
             self.in_channels, self.out_channels, self.kernel_size)
+
+class WandBLogger(nn.Module):
+    """
+    A module for logging values into W&B
+    """
+    def __init__(self, name, wandb=None):
+        super(WandBLogger, self).__init__()
+        self.wandb = wandb
+        self.name = str(name)
+
+    def forward(self, x):
+        if self.wandb:
+            train_val = '_t' if self.training else '_v'
+            self.wandb.log({self.name+train_val: x})
+        return x
+
+    def extra_repr(self):
+        return 'Logging name={}'.format(self.name)

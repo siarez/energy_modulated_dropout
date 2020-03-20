@@ -55,15 +55,15 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch, shuffle
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
+wandb.init(name=timestamp, project='Energy Modulated Dropout', group='cifar')
 # Model
 conf['topk'] = args.topk
 conf['topk_ratio'] = args.topk_ratio
 print('==> Building model..')
-net = VGG(args.model, normal=args.normal, dropout=args.dropout)
+net = VGG(args.model, normal=args.normal, dropout=args.dropout, wandb=wandb)
 print('Num of parameters: ', sum(p.numel() for p in net.parameters() if p.requires_grad))
 net = net.to(device)
 
-wandb.init(name=timestamp, project='Energy Modulated Dropout', group='cifar')
 wandb.config.update(args)
 criterion = nn.CrossEntropyLoss()
 wandb.watch(models=net, criterion=criterion, log='all')
@@ -84,7 +84,7 @@ def train(epoch):
     for batch_idx, (inputs, targets) in pbar:
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
-        outputs, features = net(inputs)
+        outputs = net(inputs)
         loss = criterion(outputs, targets)  # + shapes_kernel_loss(net)
         loss.backward()
         optimizer.step()
@@ -108,7 +108,7 @@ def test(epoch):
         pbar = tqdm(enumerate(testloader), total=len(testloader))
         for batch_idx, (inputs, targets) in pbar:
             inputs, targets = inputs.to(device), targets.to(device)
-            outputs, features = net(inputs)
+            outputs = net(inputs)
             loss = criterion(outputs, targets)
             test_loss += loss.item()
             _, predicted = outputs.max(1)
@@ -118,7 +118,6 @@ def test(epoch):
                 % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
         wandb.log({'Test Loss': test_loss/(batch_idx+1)}, step=epoch)
         wandb.log({'Test Acc.': 100.*correct/total}, step=epoch)
-        wandb.log({'features', features})  # It will create a histogram of last conv activation
 
     # Save checkpoint.
     acc = 100.*correct/total
