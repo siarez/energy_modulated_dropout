@@ -126,7 +126,7 @@ class WandBLogger(nn.Module):
     def forward(self, x):
         if self.wandb:
             train_val = '_t' if self.training else '_v'
-            self.wandb.log({self.name+train_val: x})
+            self.wandb.log({self.name+train_val: x.cpu()})
         return x
 
     def extra_repr(self):
