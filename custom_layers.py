@@ -28,7 +28,7 @@ The next decision is about how to use the modsig to dropout weights. I can think
 
 """
 
-conf = {'topk': False, 'topk_ratio': 0.25}
+conf = {'topk': False, 'topk_ratio': 0.25, 'log_intermediate': True}
 
 # Inherit from Function
 class LinearFunctionCustom(Function):
@@ -124,7 +124,7 @@ class WandBLogger(nn.Module):
         self.name = str(name)
 
     def forward(self, x):
-        if self.wandb:
+        if self.wandb and conf['log_intermediate']:
             train_val = '_t' if self.training else '_v'
             self.wandb.log({self.name+train_val: x.cpu()})
         return x

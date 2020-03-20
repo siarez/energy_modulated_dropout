@@ -93,6 +93,7 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
         pbar.set_description('Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+        conf['log_intermediate'] = batch_idx == 0
 
     wandb.log({'Train Loss': train_loss/(batch_idx+1)}, step=epoch)
     wandb.log({'Train Acc.': 100.*correct/total}, step=epoch)
