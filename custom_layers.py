@@ -138,6 +138,8 @@ class WandBLogger(nn.Module):
         if self.wandb and conf['log_intermediate']:
             train_val = '_t' if self.training else '_v'
             self.wandb.log({self.name+train_val: x.cpu()}, step=conf['epoch'])
+            zeros_fraction = (x == 0.0).float().mean()
+            self.wandb.log({self.name+'_frac_zeros_'+train_val: zeros_fraction.cpu()}, step=conf['epoch'])
         return x
 
     def extra_repr(self):
