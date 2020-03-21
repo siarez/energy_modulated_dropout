@@ -26,6 +26,10 @@ The next decision is about how to use the modsig to dropout weights. I can think
     1. Drop out the top-k weights and/or input neurons
     2. Compute Bernoulli probabilities using modsig and sample from that distribution to determine what to drop out  
 
+
+Experiment idea: Try transfer learning with across datasets, or classes. For example, train on CIFAR10 and use the 
+learned features on CIFAR100, just training the last layer. 
+
 """
 
 conf = {'topk': False, 'topk_ratio': 0.25, 'log_intermediate': True}
@@ -46,11 +50,18 @@ class LinearFunctionCustom(Function):
         # pydevd.settrace(suspend=True, trace_only_current_thread=True)
         input, weight, bias, output = ctx.saved_tensors
         grad_input = grad_weight = grad_bias = None
-        if ctx.needs_input_grad[0]:
-            grad_input = grad_output.mm(weight)
         if ctx.needs_input_grad[1]:
             grad_weight = grad_output.t().mm(input)
-        if bias is not None and ctx.needs_input_grad[3]:
+        if ctx.needs_input_grad[0]:
+            if conf['topk']:
+                # todo: do the inverse top-k as an experiment
+                topk_idx = grad_weight.abs().topk(int(grad_weight.shape[1] * conf['topk_ratio']), dim=1)[1]
+                topk_mask = torch.ones((weight.shape[0], weight.shape[1]), device=weight.device).scatter(1, topk_idx, 0.)
+                bw_weight = weight * topk_mask
+            else:
+                bw_weight = weight
+            grad_input = grad_output.mm(bw_weight)
+        if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(0).squeeze(0)
 
         return grad_input, grad_weight, grad_bias

@@ -2,7 +2,8 @@
 import torch
 import torch.nn as nn
 from torch.nn import Conv2d as Conv2dNormal
-from custom_layers import Conv2DCustom, WandBLogger
+from torch.nn import Linear as LinearNormal
+from custom_layers import Conv2DCustom, WandBLogger, LinearCustom
 
 
 cfg = {
@@ -15,22 +16,26 @@ cfg = {
 }
 
 Conv2d = None
+Linear = None
 
 class VGG(nn.Module):
     def __init__(self, vgg_name, normal=True, dropout=0., wandb=None, bn_affine=True):
         super(VGG, self).__init__()
         global Conv2d
+        global Linear
         if normal:
             Conv2d = Conv2dNormal
+            Linear = LinearNormal
         else:
             Conv2d = Conv2DCustom
+            Linear = LinearCustom
         self.features = self._make_layers(cfg[vgg_name], dropout=dropout, wandb=wandb, bn_affine=bn_affine)
         if vgg_name == 'VGG_mini':
-            self.classifier = nn.Linear(256, 10)
+            self.classifier = Linear(256, 10)
         elif vgg_name == 'VGG_tiny':
-            self.classifier = nn.Linear(2048, 10)
+            self.classifier = Linear(2048, 10)
         else:
-            self.classifier = nn.Linear(512, 10)
+            self.classifier = Linear(512, 10)
 
     def forward(self, x):
         features = self.features(x)
