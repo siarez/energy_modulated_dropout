@@ -121,8 +121,8 @@ class Conv2DCustom(nn.Conv2d):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, name=None):
         super(Conv2DCustom, self).__init__(in_channels, out_channels, kernel_size, stride=stride, padding=padding,
                                            dilation=dilation, groups=groups, bias=bias)
-        self.cum_grad_w = torch.zeros_like(self.weight)
-        self.cum_grad_b = torch.zeros_like(self.bias)
+        self.cum_grad_w = torch.nn.Parameter(torch.zeros_like(self.weight))
+        self.cum_grad_b = torch.nn.Parameter(torch.zeros_like(self.bias))
         if name:
             self.w_logger = WandBLogger(name=name+'_w')
             self.b_logger = WandBLogger(name=name+'_b')
@@ -146,16 +146,18 @@ class WandBLogger(nn.Module):
     A module for logging values into W&B
     `conf['wandb']` needs to be set for this to work
     """
-    def __init__(self, name):
+    def __init__(self, name, frac_zero=False):
         super(WandBLogger, self).__init__()
         self.name = str(name)
+        self.frac_zero = frac_zero
 
     def forward(self, x):
         if conf['wandb'] is not None and conf['log_intermediate']:
             train_val = '_t' if self.training else '_v'
             conf['wandb'].log({self.name+train_val: x.cpu()}, step=conf['epoch'])
-            zeros_fraction = (x == 0.0).float().mean()
-            conf['wandb'].log({self.name+'_frac_zeros_'+train_val: zeros_fraction.cpu()}, step=conf['epoch'])
+            if self.frac_zero:
+                zeros_fraction = (x == 0.0).float().mean()
+                conf['wandb'].log({self.name+'_frac_zeros_'+train_val: zeros_fraction.cpu()}, step=conf['epoch'])
         return x
 
     def extra_repr(self):

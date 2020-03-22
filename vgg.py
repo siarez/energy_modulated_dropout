@@ -61,7 +61,7 @@ class VGG(nn.Module):
                            nn.BatchNorm2d(x, affine=bn_affine),
                            nn.ReLU(inplace=True),
                            nn.Dropout2d(p=dropout),
-                           WandBLogger('L-{}|ch-{}_activation'.format(i, x))
+                           WandBLogger('L-{}|ch-{}_activation'.format(i, x), frac_zero=True)
                            ]
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
