@@ -57,11 +57,12 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch, shuffle
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 wandb.init(name=timestamp, project='Energy Modulated Dropout', group='cifar')
+conf['wandb'] = wandb
 # Model
 conf['topk'] = args.topk
 conf['topk_ratio'] = args.topk_ratio
 print('==> Building model..')
-net = VGG(args.model, normal=args.normal, dropout=args.dropout, wandb=wandb)
+net = VGG(args.model, normal=args.normal, dropout=args.dropout)
 print('Num of parameters: ', sum(p.numel() for p in net.parameters() if p.requires_grad))
 net = net.to(device)
 

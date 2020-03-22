@@ -32,7 +32,8 @@ learned features on CIFAR100, just training the last layer.
 
 """
 
-conf = {'topk': False, 'topk_ratio': 0.25, 'log_intermediate': True}
+conf = {'topk': False, 'topk_ratio': 0.25, 'log_intermediate': True, 'wandb': None}
+
 
 # Inherit from Function
 class LinearFunctionCustom(Function):
@@ -81,10 +82,11 @@ class LinearCustom(nn.Linear):
 
 class Conv2DFunctionCustom(Function):
     @staticmethod
-    def forward(ctx, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    def forward(ctx, input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1,
+                cum_grad_w=None, cum_grad_b=None):
         ctx.stride, ctx.padding, ctx.dilation, ctx.groups = stride, padding, dilation, groups
         output = torch.nn.functional.conv2d(input, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups)
-        ctx.save_for_backward(input, weight, bias, output)
+        ctx.save_for_backward(input, weight, bias, output, cum_grad_w, cum_grad_b)
         return output
 
     @staticmethod
@@ -93,11 +95,12 @@ class Conv2DFunctionCustom(Function):
         #pdb.Pdb(nosigint=True).set_trace()
         # import pydevd
         # pydevd.settrace(suspend=True, trace_only_current_thread=True)
-        input, weight, bias, output = ctx.saved_tensors
+        input, weight, bias, output, cum_grad_w, cum_grad_b = ctx.saved_tensors
         stride, padding, dilation, groups = ctx.stride, ctx.padding, ctx.dilation, ctx.groups
         grad_input = grad_weight = grad_bias = grad_stride = grad_padding = grad_dilation = grad_groups = None
         if ctx.needs_input_grad[1]:
             grad_weight = torch.nn.grad.conv2d_weight(input, weight.shape, grad_output, stride, padding, dilation, groups).contiguous()
+            cum_grad_w += torch.abs(grad_weight)
         if ctx.needs_input_grad[0]:
             if conf['topk']:
                 # todo: do the inverse top-k as an experiment
@@ -110,36 +113,49 @@ class Conv2DFunctionCustom(Function):
             grad_input = torch.nn.grad.conv2d_input(input.shape, bw_weight, grad_output, stride, padding, dilation, groups)
         if ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum((0, 2, 3))  # todo: double check
-        return grad_input, grad_weight, grad_bias, grad_stride, grad_padding, grad_dilation, grad_groups
+            cum_grad_b += torch.abs(grad_bias)
+        return grad_input, grad_weight, grad_bias, grad_stride, grad_padding, grad_dilation, grad_groups, None, None
 
 
 class Conv2DCustom(nn.Conv2d):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, name=None):
         super(Conv2DCustom, self).__init__(in_channels, out_channels, kernel_size, stride=stride, padding=padding,
                                            dilation=dilation, groups=groups, bias=bias)
+        self.cum_grad_w = torch.zeros_like(self.weight)
+        self.cum_grad_b = torch.zeros_like(self.bias)
+        if name:
+            self.w_logger = WandBLogger(name=name+'_w')
+            self.b_logger = WandBLogger(name=name+'_b')
 
     def forward(self, x):
-        return Conv2DFunctionCustom.apply(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        out = Conv2DFunctionCustom.apply(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups,
+                                          self.cum_grad_w, self.cum_grad_b)
+        # logging cumulative absolute gradients
+        if hasattr(self, 'w_logger') and hasattr(self, 'b_logger'):
+            self.w_logger(self.cum_grad_w)
+            self.b_logger(self.cum_grad_b)
+        return out
 
     def extra_repr(self):
         return 'in_features={}, out_features={}, bias={}'.format(
             self.in_channels, self.out_channels, self.kernel_size)
 
+
 class WandBLogger(nn.Module):
     """
     A module for logging values into W&B
+    `conf['wandb']` needs to be set for this to work
     """
-    def __init__(self, name, wandb=None):
+    def __init__(self, name):
         super(WandBLogger, self).__init__()
-        self.wandb = wandb
         self.name = str(name)
 
     def forward(self, x):
-        if self.wandb and conf['log_intermediate']:
+        if conf['wandb'] is not None and conf['log_intermediate']:
             train_val = '_t' if self.training else '_v'
-            self.wandb.log({self.name+train_val: x.cpu()}, step=conf['epoch'])
+            conf['wandb'].log({self.name+train_val: x.cpu()}, step=conf['epoch'])
             zeros_fraction = (x == 0.0).float().mean()
-            self.wandb.log({self.name+'_frac_zeros_'+train_val: zeros_fraction.cpu()}, step=conf['epoch'])
+            conf['wandb'].log({self.name+'_frac_zeros_'+train_val: zeros_fraction.cpu()}, step=conf['epoch'])
         return x
 
     def extra_repr(self):

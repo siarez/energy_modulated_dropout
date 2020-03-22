@@ -18,18 +18,25 @@ cfg = {
 Conv2d = None
 Linear = None
 
+class NamedNormalConv2D(Conv2dNormal):
+    """This is a wrapper for normal convolution so it can accept a `name` parameter"""
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, name=None):
+        super(NamedNormalConv2D, self).__init__(in_channels, out_channels, kernel_size, stride=stride, padding=padding,
+                                           dilation=dilation, groups=groups, bias=bias)
+        self.name = name
+
 class VGG(nn.Module):
-    def __init__(self, vgg_name, normal=True, dropout=0., wandb=None, bn_affine=True):
+    def __init__(self, vgg_name, normal=True, dropout=0., bn_affine=True):
         super(VGG, self).__init__()
         global Conv2d
         global Linear
         if normal:
-            Conv2d = Conv2dNormal
+            Conv2d = NamedNormalConv2D
             Linear = LinearNormal
         else:
             Conv2d = Conv2DCustom
             Linear = LinearCustom
-        self.features = self._make_layers(cfg[vgg_name], dropout=dropout, wandb=wandb, bn_affine=bn_affine)
+        self.features = self._make_layers(cfg[vgg_name], dropout=dropout, bn_affine=bn_affine)
         if vgg_name == 'VGG_mini':
             self.classifier = Linear(256, 10)
         elif vgg_name == 'VGG_tiny':
@@ -43,18 +50,18 @@ class VGG(nn.Module):
         out = self.classifier(features)
         return out
 
-    def _make_layers(self, cfg, dropout=0., wandb=None, bn_affine=True):
+    def _make_layers(self, cfg, dropout=0., bn_affine=True):
         layers = []
         in_channels = 3
         for i, x in enumerate(cfg):
             if x == 'M':
                 layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
             else:
-                layers += [Conv2d(in_channels, x, kernel_size=3, padding=1),
+                layers += [Conv2d(in_channels, x, kernel_size=3, padding=1, name='L-{}|ch-{}'.format(i, x)),
                            nn.BatchNorm2d(x, affine=bn_affine),
                            nn.ReLU(inplace=True),
                            nn.Dropout2d(p=dropout),
-                           WandBLogger('L-{}|ch-{}'.format(i, x), wandb)
+                           WandBLogger('L-{}|ch-{}_activation'.format(i, x))
                            ]
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
