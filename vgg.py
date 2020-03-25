@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.nn import Conv2d as Conv2dNormal
 from torch.nn import Linear as LinearNormal
 from custom_layers import Conv2DCustom, WandBLogger, LinearCustom
-
+from consensus_layers import LinearConsensus
 
 cfg = {
     'VGG_tiny': [32, 'M', 64, 'M', 128, 128, 'M'],
@@ -26,7 +26,7 @@ class NamedNormalConv2D(Conv2dNormal):
         self.name = name
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name, normal=True, dropout=0., bn_affine=True):
+    def __init__(self, vgg_name, normal=True, consensus=False, dropout=0., bn_affine=True):
         super(VGG, self).__init__()
         global Conv2d
         global Linear
@@ -34,8 +34,12 @@ class VGG(nn.Module):
             Conv2d = NamedNormalConv2D
             Linear = LinearNormal
         else:
-            Conv2d = Conv2DCustom
-            Linear = LinearCustom
+            if consensus:
+                Conv2d = Conv2DCustom
+                Linear = LinearConsensus
+            else:
+                Conv2d = Conv2DCustom
+                Linear = LinearCustom
         self.features = self._make_layers(cfg[vgg_name], dropout=dropout, bn_affine=bn_affine)
         if vgg_name == 'VGG_mini':
             self.classifier = Linear(256, 10)

@@ -7,10 +7,11 @@ import torchvision.transforms as transforms
 import os
 import time
 import argparse
-from vgg import VGG
-from custom_layers import conf
+import vgg
+# from vgg import VGG
 from tqdm import tqdm
 import wandb
+from conf import global_conf
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('-lr', default=0.001, type=float, help='Learning rate')
@@ -21,6 +22,7 @@ parser.add_argument('-batch', default=128, type=int, help='Batch size')
 parser.add_argument('-epochs', default=100, type=int, help='Epochs to train for')
 parser.add_argument('-workers', default=4, type=int, help='Dataloader workers')
 parser.add_argument('-normal', action='store_true', default=False, help='Use pytorch\'s conv layer')
+parser.add_argument('-consensus', action='store_true', default=False, help='Uses "consensus" layers')
 parser.add_argument('-bn_affine', action='store_true', default=False, help='Make the batchnorm layers affine')
 parser.add_argument('-dropout', default=0., type=float, help='Drop probability')
 parser.add_argument('-topk', action='store_true', default=False, help='whether to mask topk gradients')
@@ -57,12 +59,13 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch, shuffle
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 wandb.init(name=timestamp, project='Energy Modulated Dropout', group='cifar')
-conf['wandb'] = wandb
+
+global_conf['wandb'] = wandb
 # Model
-conf['topk'] = args.topk
-conf['topk_ratio'] = args.topk_ratio
+global_conf['topk'] = args.topk
+global_conf['topk_ratio'] = args.topk_ratio
 print('==> Building model..')
-net = VGG(args.model, normal=args.normal, dropout=args.dropout)
+net = vgg.VGG(args.model, normal=args.normal, consensus=args.consensus, dropout=args.dropout)
 print('Num of parameters: ', sum(p.numel() for p in net.parameters() if p.requires_grad))
 net = net.to(device)
 
@@ -83,7 +86,7 @@ def train(epoch):
     correct = 0
     total = 0
     pbar = tqdm(enumerate(trainloader), total=len(trainloader))
-    conf['epoch'] = epoch
+    global_conf['epoch'] = epoch
     for batch_idx, (inputs, targets) in pbar:
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
@@ -96,7 +99,7 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
         pbar.set_description('Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
-        conf['log_intermediate'] = batch_idx == 0  # Only log the first batch of each epoch for speed reasons
+        global_conf['log_intermediate'] = batch_idx == 0  # Only log the first batch of each epoch for speed reasons
 
     wandb.log({'Train Loss': train_loss/(batch_idx+1)}, step=epoch)
     wandb.log({'Train Acc.': 100.*correct/total}, step=epoch)
@@ -142,7 +145,7 @@ def test(epoch):
 
 for epoch in tqdm(range(start_epoch, start_epoch+args.epochs)):
     train(epoch)
-    conf['log_intermediate'] = False
+    global_conf['log_intermediate'] = False
     test(epoch)
 
 wandb.log({'hparam/accuracy': best_acc})

@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import Function
+from conf import global_conf as conf
 
 """
 There are 4 approaches in a 2x2 table:
@@ -30,9 +31,17 @@ The next decision is about how to use the modsig to dropout weights. I can think
 Experiment idea: Try transfer learning with across datasets, or classes. For example, train on CIFAR10 and use the 
 learned features on CIFAR100, just training the last layer. 
 
+Idea: Remove activation functions (e.g. Relu layers) altogether, and do forward pass dropout using the "consensus" mod sig.
+This is interesting, because there is no explicit non-linearity like a normal neural network, but there is a different
+type of non-linearity that stems from dropping nodes(or edges?) out. At the same time the whole system is trainable with
+backprop. This is a Frankenstein hybrid between my IGS model (which is an EBM) and deep learning. If this performs 
+comparably to deep learning it would be a big leap for my s/IGS. 
+Also there is no reason the energy should be calculated only across one layer. However, doing it across multiple layers
+makes it slower, and makes it look like Gibbs sampling of EBMs. 
+
 """
 
-conf = {'topk': False, 'topk_ratio': 0.25, 'log_intermediate': True, 'wandb': None}
+
 
 
 # Inherit from Function
@@ -144,7 +153,7 @@ class Conv2DCustom(nn.Conv2d):
 class WandBLogger(nn.Module):
     """
     A module for logging values into W&B
-    `conf['wandb']` needs to be set for this to work
+    `global_conf['wandb']` needs to be set for this to work
     """
     def __init__(self, name, frac_zero=False):
         super(WandBLogger, self).__init__()
